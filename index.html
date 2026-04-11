@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Cognos Custom Control Mock</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js"></script>
+</head>
+<body>
+  <div id="cognos_container" style="border: 1px solid #ccc; padding: 20px;"></div>
+    <script>
+        requirejs.config({
+            baseUrl: 'js', // look in the js folder for modules
+            paths: { "jquery": "https://code.jquery.com/jquery-3.7.1.min" }
+        });
+
+        // Mock the oControlHost object
+        const mockControlHost = {
+            container: document.getElementById("cognos_container")
+        };
+
+        require(["App"], function(App) {
+            const myApp = new App();
+            myApp.draw(mockControlHost);
+        });
+    </script>
+</body>
+</html>

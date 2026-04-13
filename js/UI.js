@@ -9,12 +9,26 @@ define(["jquery"], function($) {
         renderSkeleton() {
             this.$cnt.html
             (`
-              <div class="cognos-custom-control">
-                <input type="file" id="xml-upload" accept=".xml"/>
-                <div id="status-bar">Bestand wordt geladen...</div>
-                <hr/>
-                <div id="data-preview"></div>
-              </div>
+        <div class="cognos-extractor-wrapper" style="font-family: sans-serif; padding: 15px;">
+            <div id="status-bar" style="background: #f8f9fa; padding: 10px; border-radius: 4px; margin-bottom: 15px; border-left: 4px solid #005fb8;">
+                Ready to load model...
+            </div>
+            
+            <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 20px;">
+                <input type="file" id="xml-upload" accept=".xml" />
+                <input type="text" id="search-box" placeholder="Search tables or columns..." 
+                       style="flex-grow: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px;" />
+            </div>
+
+            <div id="data-preview"></div>
+            
+            <div id="pagination-controls" style="margin-top: 20px; text-align: center; display: none;">
+                <button id="load-more" style="padding: 10px 20px; cursor: pointer; background: #005fb8; color: white; border: none; border-radius: 4px;">
+                    Load More Results
+                </button>
+            </div>
+        </div>
+
             `)
         }
 
@@ -22,24 +36,37 @@ define(["jquery"], function($) {
             this.$cnt.find("#status-bar").text(msg);
         }
 
-        displayModel(tables) {
+
+        displayModel(tables, append = false) { // Add 'append = false' here
             const $preview = this.$cnt.find("#data-preview");
 
-            // Debug: Is the UI finding the preview div?
-            console.log("UI Preview Div found:", $preview.length);
+            // Als we niet 'bijplakken', maken we de lijst eerst leeg
+            if (!append) $preview.empty();
 
-            $preview.empty();
+            // Check of er resultaten zijn
+            if (tables.length === 0 && !append) {
+                $preview.html("<p style='color: #666;'>Geen resultaat gevonden voor ingevoerde zoekterm.</p>");
+                return; // Stop de functie hier
+            }
 
             tables.forEach(table => {
+                // Bepaal de badge kleur op basis van de laag (Data of Model)
+                const badgeColor = table.layer === 'Data' ? '#4caf50' : '#ff9800';
+
                 const columnList = table.columns.map(col =>
-                    `<span style="display:inline-block; background:#ddd; padding:2px 8px; margin:2px; border-radius:4px; font-family:sans-serif;">${col}</span>`
+                    `<span style="display:inline-block; background:#ddd; padding:2px 8px; margin:2px; border-radius:4px; font-family:sans-serif; font-size:11px;">${col}</span>`
                 ).join("");
 
                 const html = `
-                    <div style="margin-top:20px; border:1px solid #005fb8; border-radius:5px;">
-                        <div style="background:#005fb8; color:white; padding:8px;">${table.name}</div>
+                    <div style="margin-top:20px; border:1px solid #005fb8; border-radius:5px; position:relative;">
+                        <div style="background:#005fb8; color:white; padding:8px; display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-weight:bold;">${table.name}</span>
+                            <span style="background:${badgeColor}; color:white; font-size:10px; padding:2px 6px; border-radius:3px; text-transform:uppercase;">
+                                ${table.layer}
+                            </span>
+                        </div>
                         <div style="padding:15px;">
-                            <pre style="background:#f4f4f4; padding:10px; border:1px solid #ccc; white-space:pre-wrap;">${table.sql}</pre>
+                            <pre style="background:#f4f4f4; padding:10px; border:1px solid #ccc; white-space:pre-wrap; font-size:12px;">${table.sql}</pre>
                             <div style="margin-top:10px;">${columnList}</div>
                         </div>
                     </div>
@@ -48,7 +75,9 @@ define(["jquery"], function($) {
             });
         }
 
-        // this is the end of the class
+
+
+    // this is the end of the class
     }
     return UI;
 });

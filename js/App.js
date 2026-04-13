@@ -5,41 +5,87 @@ define(["jquery", "./UI", "./Extractor", "./Styles"], function($, UI, Extractor,
                 constructor() {
                         this.extractor = new Extractor();
                         this.ui = null;
-
-                        // laad styles direct tijdens het instantieren van de class
+                        this.allData = [];
+                        this.filteredData = [];
+                        this.itemsPerPage = 10;
+                        this.currentPage = 1;
                         Styles.inject();
                 }
 
                 draw(oControlHost) {
                         this.ui = new UI(oControlHost.container);
                         this.ui.renderSkeleton();
-
-                        // Delegate events
                         $(oControlHost.container).on("change", "#xml-upload", (e) => this.handleUpload(e));
+
+                        // Listen for Search (input event is live as you type)
+                        $(oControlHost.container).on("input", "#search-box", (e) => {
+                                this.handleSearch($(e.target).val());
+                        });
+
+                        // Listen for load more
+                        $(oControlHost.container).on("click", "#load-more", () => {
+                                this.currentPage++;
+                                this.renderCurrentPage(true); // true means 'append' instead of replace
+                        });
+                }
+
+
+                handleSearch(term) {
+                        this.currentPage = 1;
+                        const s = term.toLowerCase();
+
+                        this.filteredData = this.allData.filter(item =>
+                                item.name.toLowerCase().includes(s) || item.sql.toLowerCase().includes(s) || item.columns.some(c => c.toLowerCase().includes(s))
+                        );
+
+                        this.renderCurrentPage(false);
+                }
+
+                renderCurrentPage(append = false) {
+                        const start = (this.currentPage - 1) * this.itemsPerPage;
+                        const end = start + this.itemsPerPage;
+
+                        // Grab the specific items for this page
+                        const pageItems = this.filteredData.slice(start, end);
+
+                        // Send to UI
+                        this.ui.displayModel(pageItems, append);
+
+                        // Boolean check: is the end of the window still inside the total list
+                        const hasMore = end < this.filteredData.length;
+
+                        // Show/Hide "Load More" button
+                        $("#pagination-controls").toggle(hasMore);
+
+                        this.ui.updateStatus(`Showing ${Math.min(end, this.filteredData.length)} of ${this.filteredData.length} results.`);
                 }
 
                 async handleUpload(e) {
                         const file = e.target.files[0];
                         if (!file) return;
 
+                        this.ui.updateStatus("Bezig met verwerken...");
+
                         try {
                                 await this.extractor.parseFile(file);
 
-                                // Get the full array for Datalaag
-                                const dataLayer = this.extractor.getLayerData('Datalaag');
+                                // Collect all layers
 
-                                if (dataLayer.length > 0) {
-                                        // Send the array to the UI
-                                        this.ui.displayModel([dataLayer[0]]);
-                                        this.ui.updateStatus(`Weergeven van ${dataLayer[0].name}`);
-                                }
+                                const dataLayer = this.extractor.getLayerData('Datalaag').map(item => ({ ...item, layer: 'Data' }));
+                                const modelLayer = this.extractor.getLayerData('Modellaag').map(item => ({ ...item, layer: 'Model' }));
+
+                                // Store for later use in search
+                                this.allData = [...dataLayer, ...modelLayer];
+                                this.filteredData = this.allData;
+                                this.currentPage = 1;
+                                this.renderCurrentPage(false);
 
                         } catch (err) {
                                 this.ui.updateStatus("Fout: " + err.message);
+                                console.error(err);
                         }
                 }
-
-
         }
+
         return App;
 });

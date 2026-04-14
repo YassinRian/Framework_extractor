@@ -52,20 +52,31 @@ define(["jquery", "./UI", "./Extractor", "./Styles"], function ($, UI, Extractor
                 }
 
 
-                handleSearch(term) {
+                handleSearch(term = "") {
                         this.currentPage = 1;
-                        const s = term.toLowerCase();
 
-                        this.filteredData = this.allData.filter(item => {
-                                const matchesSearch = item.name.toLowerCase().includes(s) ||
-                                        item.sql.toLowerCase().includes(s) ||
-                                        item.columns.some(c => c.toLowerCase().includes(s));
+                        // 1. Splits de zoekterm op de delimiter '::'
+                        // Filter leegte weg (bijv. als iemand eindigt met ::)
+                        const searchParts = term.toLowerCase().split('::').map(p => p.trim()).filter(p => p !== "");
 
-                                const matchesLayer = this.currentLayerFilter === 'all' || item.layer === this.currentLayerFilter;
-
-                                return matchesSearch && matchesLayer;
+                        // 2. We starten met de volledige dataset (of de laag-filter)
+                        let results = this.allData.filter(item => {
+                                return this.currentLayerFilter === 'all' || item.layer === this.currentLayerFilter;
                         });
 
+                        // 3. Pas elk deel van de zoekopdracht incrementeel toe
+                        searchParts.forEach(part => {
+                                results = results.filter(item => {
+                                        const inName = item.name.toLowerCase().includes(part);
+                                        const inSql = item.sql.toLowerCase().includes(part);
+                                        const inColumns = item.columns.some(c => c.toLowerCase().includes(part));
+                                        const inFolder = item.folder.toLowerCase().includes(part);
+
+                                        return inName || inSql || inColumns || inFolder;
+                                });
+                        });
+
+                        this.filteredData = results;
                         this.renderCurrentPage(false);
                 }
 

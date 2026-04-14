@@ -46,6 +46,15 @@ define(["jquery"], function ($) {
 
                         // We halen de huidige waarde van de zoekbalk op
                         const searchTerm = $("#search-box").val() || "";
+                        const totalCount = tables.length; // Dit is de gefilterde lijst
+
+                        const breadcrumb = searchTerm.replace(/::/g, ' <span style="color:#005fb8">➔</span> ');
+
+                        // Update een teller in de skeleton (voeg deze div toe aan renderSkeleton)
+                        this.$cnt.find("#status-bar").html(`
+                        Gevonden: <strong>${totalCount}</strong> resultaten 
+                        ${searchTerm ? `voor "${searchTerm.replace(/::/g, ' ➔ ')}"` : ''}
+                        `);
 
                         // Als we niet 'bijplakken', maken we de lijst eerst leeg
                         if (!append) $preview.empty();
@@ -139,12 +148,35 @@ define(["jquery"], function ($) {
                         return html;
                 }
 
-                highlightText(text, term) {
-                        if (!term || term.length < 2) return text; // Don't highlight for 1-letter searches
 
-                        // Create a regex: 'g' = global, 'i' = case-insensitive
-                        const regex = new RegExp(`(${term})`, 'gi');
-                        return text.replace(regex, '<span class="search-match">$1</span>');
+                highlightText(text, term) {
+                        if (!text || !term || term.length < 2) return text;
+
+                        const parts = term.split('::')
+                                .map(p => p.trim())
+                                .filter(p => p.length >= 2);
+
+                        if (parts.length === 0) return text;
+
+                        let highlightedText = text;
+
+                        parts.forEach((part, index) => {
+                                // Kies een kleur op basis van de index (0 t/m 4)
+                                const colorClass = `match-${index % 5}`;
+
+                                // We gebruiken een Regex die hoofdlettergevoeligheid negeert
+                                const regex = new RegExp(`(${this.escapeRegExp(part)})`, 'gi');
+
+                                // Vervang de tekst door een span met de specifieke kleur-class
+                                highlightedText = highlightedText.replace(regex, `<span class="search-match ${colorClass}">$1</span>`);
+                        });
+
+                        return highlightedText;
+                }
+
+                // Hulpmiddel om speciale tekens in de zoekterm te ontsnappen (zoals . of *)
+                escapeRegExp(string) {
+                        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
                 }
 
 

@@ -54,25 +54,29 @@ define(["jquery", "./UI", "./Extractor", "./Styles"], function ($, UI, Extractor
 
                 handleSearch(term = "") {
                         this.currentPage = 1;
+                        const searchParts = term.split('::').map(p => p.trim()).filter(p => p !== "");
 
-                        // 1. Splits de zoekterm op de delimiter '::'
-                        // Filter leegte weg (bijv. als iemand eindigt met ::)
-                        const searchParts = term.toLowerCase().split('::').map(p => p.trim()).filter(p => p !== "");
-
-                        // 2. We starten met de volledige dataset (of de laag-filter)
                         let results = this.allData.filter(item => {
                                 return this.currentLayerFilter === 'all' || item.layer === this.currentLayerFilter;
                         });
 
-                        // 3. Pas elk deel van de zoekopdracht incrementeel toe
                         searchParts.forEach(part => {
-                                results = results.filter(item => {
-                                        const inName = item.name.toLowerCase().includes(part);
-                                        const inSql = item.sql.toLowerCase().includes(part);
-                                        const inColumns = item.columns.some(c => c.toLowerCase().includes(part));
-                                        const inFolder = item.folder.toLowerCase().includes(part);
+                                let regex = null;
+                                try {
+                                        // We checken of het een geldige Regex is. 
+                                        // Bijv: ^dim_ of [0-9]+
+                                        regex = new RegExp(part, 'i');
+                                } catch (e) {
+                                        regex = null; // Ongeldige regex, gebruik normale string match
+                                }
 
-                                        return inName || inSql || inColumns || inFolder;
+                                results = results.filter(item => {
+                                        const check = (val) => regex ? regex.test(val) : val.toLowerCase().includes(part.toLowerCase());
+
+                                        return check(item.name) ||
+                                                check(item.sql) ||
+                                                item.columns.some(c => check(c)) ||
+                                                check(item.folder);
                                 });
                         });
 

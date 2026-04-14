@@ -152,22 +152,24 @@ define(["jquery"], function ($) {
                 highlightText(text, term) {
                         if (!text || !term || term.length < 2) return text;
 
-                        const parts = term.split('::')
-                                .map(p => p.trim())
-                                .filter(p => p.length >= 2);
-
-                        if (parts.length === 0) return text;
-
+                        const parts = term.split('::').map(p => p.trim()).filter(p => p.length >= 2);
                         let highlightedText = text;
 
                         parts.forEach((part, index) => {
-                                // Kies een kleur op basis van de index (0 t/m 4)
                                 const colorClass = `match-${index % 5}`;
+                                let regex;
 
-                                // We gebruiken een Regex die hoofdlettergevoeligheid negeert
-                                const regex = new RegExp(`(${this.escapeRegExp(part)})`, 'gi');
+                                try {
+                                        // PROBEER: Gebruik de term direct als Regex (voor ^, $, |, etc.)
+                                        // We wrappen het in haakjes () zodat we $1 kunnen gebruiken voor de match
+                                        regex = new RegExp(`(${part})`, 'gi');
+                                } catch (e) {
+                                        // FALLBACK: Als de Regex ongeldig is (bijv. een losse [ ), 
+                                        // dan ontsnappen we de tekens en zoeken we letterlijk.
+                                        regex = new RegExp(`(${this.escapeRegExp(part)})`, 'gi');
+                                }
 
-                                // Vervang de tekst door een span met de specifieke kleur-class
+                                // Gebruik $1 om de exact gevonden tekst (met behoud van casing) terug te zetten
                                 highlightedText = highlightedText.replace(regex, `<span class="search-match ${colorClass}">$1</span>`);
                         });
 

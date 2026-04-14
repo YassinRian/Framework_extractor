@@ -1,4 +1,4 @@
-define(["jquery", "./UI", "./Extractor", "./Styles"], function($, UI, Extractor, Styles) {
+define(["jquery", "./UI", "./Extractor", "./Styles"], function ($, UI, Extractor, Styles) {
         "use strict";
 
         class App {
@@ -10,22 +10,44 @@ define(["jquery", "./UI", "./Extractor", "./Styles"], function($, UI, Extractor,
                         this.itemsPerPage = 10;
                         this.currentPage = 1;
                         Styles.inject();
+                        this.currentLayerFilter = "all";
                 }
 
                 draw(oControlHost) {
                         this.ui = new UI(oControlHost.container);
                         this.ui.renderSkeleton();
-                        $(oControlHost.container).on("change", "#xml-upload", (e) => this.handleUpload(e));
 
-                        // Listen for Search (input event is live as you type)
-                        $(oControlHost.container).on("input", "#search-box", (e) => {
-                                this.handleSearch($(e.target).val());
+                        const $container = $(oControlHost.container);
+
+                        // 1. File Upload
+                        $container.on("change", "#xml-upload", (e) => this.handleUpload(e));
+
+                        // 2. Search Box
+                        $container.on("input", "#search-box", (e) => this.handleSearch($(e.target).val()));
+
+                        // 3. Load More
+                        $container.on("click", "#load-more", () => {
+                                this.currentPage++;
+                                this.renderCurrentPage(true);
                         });
 
-                        // Listen for load more
-                        $(oControlHost.container).on("click", "#load-more", () => {
-                                this.currentPage++;
-                                this.renderCurrentPage(true); // true means 'append' instead of replace
+                        // 4. TAB FILTER (The Fix)
+                        $container.on("click", ".layer-tab", (e) => {
+                                // Voorkom dat de browser rare dingen doet
+                                e.preventDefault();
+
+                                const $clickedTab = $(e.currentTarget);
+                                const newLayer = $clickedTab.attr("data-layer");
+
+                                console.log("Tab clicked! Target layer:", newLayer); // Dit MOET nu verschijnen
+
+                                // UI Update
+                                $container.find(".layer-tab").removeClass("active");
+                                $clickedTab.addClass("active");
+
+                                // Logic Update
+                                this.currentLayerFilter = newLayer;
+                                this.handleSearch($container.find("#search-box").val() || "");
                         });
                 }
 
@@ -34,9 +56,15 @@ define(["jquery", "./UI", "./Extractor", "./Styles"], function($, UI, Extractor,
                         this.currentPage = 1;
                         const s = term.toLowerCase();
 
-                        this.filteredData = this.allData.filter(item =>
-                                item.name.toLowerCase().includes(s) || item.sql.toLowerCase().includes(s) || item.columns.some(c => c.toLowerCase().includes(s))
-                        );
+                        this.filteredData = this.allData.filter(item => {
+                                const matchesSearch = item.name.toLowerCase().includes(s) ||
+                                        item.sql.toLowerCase().includes(s) ||
+                                        item.columns.some(c => c.toLowerCase().includes(s));
+
+                                const matchesLayer = this.currentLayerFilter === 'all' || item.layer === this.currentLayerFilter;
+
+                                return matchesSearch && matchesLayer;
+                        });
 
                         this.renderCurrentPage(false);
                 }

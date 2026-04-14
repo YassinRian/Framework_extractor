@@ -35,46 +35,44 @@ define([], function() {
                  * @param {string} layerName - e.g., 'Datalaag', 'Modellaag'
                  */
 
-getLayerData(layerName) {
-    const ln = this.ln;
-    const scopePath = `//*[local-name()='namespace'][${ln('name')}='${layerName}']`;
-    const scopeNode = this.xmlDoc.evaluate(scopePath, this.xmlDoc, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+                getLayerData(layerName) {
+                        const ln = this.ln;
+                        const scopePath = `//*[local-name()='namespace'][${ln('name')}='${layerName}']`;
+                        const scopeNode = this.xmlDoc.evaluate(scopePath, this.xmlDoc, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
 
-    if (!scopeNode) return [];
+                        if (!scopeNode) return [];
 
-    // We gebruiken weer de 'descendant' search (//) want die vindt ALTIJD de subjects
-    return this.query(`.//${ln('querySubject')}`, scopeNode).map(qs => {
-        const nameNode = this.xmlDoc.evaluate(`./${ln('name')}`, qs, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
-        const sqlNode = this.xmlDoc.evaluate(`.//${ln('sql')}`, qs, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
-        const columnNodes = this.query(`.//${ln('queryItem')}/${ln('name')}`, qs);
+                        // We gebruiken weer de 'descendant' search (//) want die vindt ALTIJD de subjects
+                        return this.query(`.//${ln('querySubject')}`, scopeNode).map(qs => {
+                                const nameNode = this.xmlDoc.evaluate(`./${ln('name')}`, qs, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+                                const sqlNode = this.xmlDoc.evaluate(`.//${ln('sql')}`, qs, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+                                const columnNodes = this.query(`.//${ln('queryItem')}/${ln('name')}`, qs);
 
-        // --- DE NIEUWE CLIMB LOGIC ---
-        let folderName = "";
-        let parent = qs.parentNode;
+                                // --- DE NIEUWE CLIMB LOGIC ---
+                                let folderName = "";
+                                let parent = qs.parentNode;
 
-        // Klim omhoog vanaf de tabel naar de laag-root
-        while (parent && parent !== scopeNode) {
-            if (parent.localName === 'folder') {
-                const fNameNode = this.xmlDoc.evaluate(`./${ln('name')}`, parent, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
-                if (fNameNode) {
-                    folderName = fNameNode.textContent.trim();
-                    break; // Pak de dichtstbijzijnde folder
+                                // Klim omhoog vanaf de tabel naar de laag-root
+                                while (parent && parent !== scopeNode) {
+                                        if (parent.localName === 'folder') {
+                                                const fNameNode = this.xmlDoc.evaluate(`./${ln('name')}`, parent, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+                                                if (fNameNode) {
+                                                        folderName = fNameNode.textContent.trim();
+                                                        break; // Pak de dichtstbijzijnde folder
+                                                }
+                                        }
+                                        parent = parent.parentNode;
+                                }
+
+                                return {
+                                        name: nameNode ? nameNode.textContent : "Onbekend",
+                                        folder: folderName,
+                                        sql: sqlNode ? sqlNode.textContent.trim() : "Geen SQL gevonden",
+                                        columns: columnNodes.map(n => n.textContent),
+                                        layer: (layerName === 'Datalaag' ? 'Data' : 'Model')
+                                };
+                        });
                 }
-            }
-            parent = parent.parentNode;
-        }
-
-        return {
-            name: nameNode ? nameNode.textContent : "Onbekend",
-            folder: folderName,
-            sql: sqlNode ? sqlNode.textContent.trim() : "Geen SQL gevonden",
-            columns: columnNodes.map(n => n.textContent),
-            layer: (layerName === 'Datalaag' ? 'Data' : 'Model')
-        };
-    });
-}
-
-
 
         }
 

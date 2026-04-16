@@ -1,14 +1,16 @@
-define(["jquery", "./UI", "./Extractor", "./Styles"], function (
+define(["jquery", "./UI", "./Extractor", "./Styles", "./TimeMachine"], function (
   $,
   UI,
   Extractor,
   Styles,
+  TimeMachine
 ) {
   "use strict";
 
   class App {
     constructor() {
       this.extractor = new Extractor();
+      this.timeMachine = new TimeMachine();
       this.ui = null;
       this.allData = [];
       this.filteredData = [];
@@ -19,7 +21,7 @@ define(["jquery", "./UI", "./Extractor", "./Styles"], function (
     }
 
     draw(oControlHost) {
-      this.ui = new UI(oControlHost.container); ///
+      this.ui = new UI(oControlHost.container, this); ///
       this.ui.renderSkeleton();
 
       const $container = $(oControlHost.container);
@@ -55,6 +57,8 @@ define(["jquery", "./UI", "./Extractor", "./Styles"], function (
         this.handleSearch($container.find("#search-box").val() || "");
       });
 
+      // 5. SQL/GRID view
+
       $(oControlHost.container).on("click", ".toggle-view", (e) => {
         const $btn = $(e.target);
         const view = $btn.data("view");
@@ -71,6 +75,8 @@ define(["jquery", "./UI", "./Extractor", "./Styles"], function (
           $card.find(".grid-view").show();
         }
       });
+
+      // 6. COPY SQL
 
       $(oControlHost.container).on("click", ".copy-sql-btn", function(e) {
         // Voorkom dat de toggle (click op de container) ook afgaat!
@@ -95,7 +101,7 @@ define(["jquery", "./UI", "./Extractor", "./Styles"], function (
         });
     });
 
-
+      // 7. HIGHLIGHT ON/OFF
       $(oControlHost.container).on("click", ".clickable-sql", function() {
           const $container = $(this);
           const state = $container.attr("data-highlight");
@@ -115,7 +121,7 @@ define(["jquery", "./UI", "./Extractor", "./Styles"], function (
           }
       });
 
-
+      // 8. BREADCRUMB VIEWER
       $(oControlHost.container).on("click", ".breadcrumb-wrapper", function() {
         const $wrapper = $(this);
         const $collapsed = $wrapper.find(".path-collapsed");
@@ -130,51 +136,71 @@ define(["jquery", "./UI", "./Extractor", "./Styles"], function (
         }
     });
 
+    // 9. Time Travel Filter (Nieuw!)
+        $container.on("change", "#time-range-select", (e) => {
+            const val = e.target.value;
+            if (val === "all") {
+                this.timeMachine.reset();
+                $("#time-info-msg").text("");
+            } else {
+                this.timeMachine.setRange(parseInt(val));
+                $("#time-info-msg").text(`Changes since ${this.timeMachine.startDate.toLocaleDateString()}`);
+            }
+            this.handleSearch($("#search-box").val());
+        });
+
 
     }
 
-    handleSearch(term = "") {
-      this.currentPage = 1;
-      const searchParts = term
+handleSearch(term = "") {
+    this.currentPage = 1;
+
+    // 1. TIJD FILTER (Nieuw!)
+    // We laten de TimeMachine eerst de lijst uitdunnen
+    let results = this.timeMachine.isActive 
+        ? this.timeMachine.filterData(this.allData) 
+        : this.allData;
+
+    // 2. LAAG FILTER
+    results = results.filter((item) => {
+        return (
+            this.currentLayerFilter === "all" ||
+            item.layer === this.currentLayerFilter
+        );
+    });
+
+    // 3. TEKST SEARCH (Bestaande :: logica)
+    const searchParts = term
         .split("::")
         .map((p) => p.trim())
         .filter((p) => p !== "");
 
-      let results = this.allData.filter((item) => {
-        return (
-          this.currentLayerFilter === "all" ||
-          item.layer === this.currentLayerFilter
-        );
-      });
-
-      searchParts.forEach((part) => {
+    searchParts.forEach((part) => {
         let regex = null;
         try {
-          // We checken of het een geldige Regex is.
-          // Bijv: ^dim_ of [0-9]+
-          regex = new RegExp(part, "i");
+            regex = new RegExp(part, "i");
         } catch (e) {
-          regex = null; // Ongeldige regex, gebruik normale string match
+            regex = null;
         }
 
         results = results.filter((item) => {
-          const check = (val) =>
-            regex
-              ? regex.test(val)
-              : val.toLowerCase().includes(part.toLowerCase());
+            const check = (val) =>
+                regex
+                    ? regex.test(val)
+                    : (val || "").toLowerCase().includes(part.toLowerCase());
 
-          return (
-            check(item.name) ||
-            check(item.sql) ||
-            item.columns.some((c) => check(c.name)) ||
-            check(item.folder)
-          );
+            return (
+                check(item.name) ||
+                check(item.sql) ||
+                item.columns.some((c) => check(c.name)) ||
+                check(item.fullPath) // Gebruik fullPath voor betere context
+            );
         });
-      });
+    });
 
-      this.filteredData = results;
-      this.renderCurrentPage(false);
-    }
+    this.filteredData = results;
+    this.renderCurrentPage(false);
+}
 
     renderCurrentPage(append = false) {
       const start = (this.currentPage - 1) * this.itemsPerPage;

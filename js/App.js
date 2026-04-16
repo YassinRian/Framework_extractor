@@ -149,6 +149,14 @@ define(["jquery", "./UI", "./Extractor", "./Styles", "./TimeMachine"], function 
             this.handleSearch($("#search-box").val());
         });
 
+// GEBRUIK DEZE SYNTAX: Dit werkt ALTIJD voor dynamische knoppen
+  $container.on("click", "#export-tech-sql", (e) => {
+        console.log("BOOM! De knop werkt nu."); 
+        e.preventDefault();
+        e.stopPropagation();
+        this.handleTechnicalExport();
+    });
+
 
     }
 
@@ -258,6 +266,66 @@ handleSearch(term = "") {
         console.error(err);
       }
     }
+
+
+handleTechnicalExport() {
+    // Check of we data hebben
+    if (!this.filteredData || this.filteredData.length === 0) {
+        alert("Er zijn geen resultaten om te exporteren. Upload eerst een model of pas je zoekterm aan.");
+        return;
+    }
+
+    this.ui.updateStatus("Bezig met genereren van technische export...");
+
+    let exportContent = `-- Cognos Framework Manager Technical Export\n`;
+    exportContent += `-- Genereerd op: ${new Date().toLocaleString()}\n`;
+    exportContent += `-- Filter: ${$("#search-box").val() || "Geen"}\n`;
+    exportContent += `--------------------------------------------------\n\n`;
+
+    let exportCount = 0;
+
+    this.filteredData.forEach(table => {
+        // We exporteren alleen de Modellaag omdat de Datalaag al de ID's heeft
+        if (table.layer === "Model") {
+            const techSql = this.ui.generateTechnicalExportSQL(table);
+            if (techSql) {
+                exportContent += `/* Table: ${table.name} */\n`;
+                exportContent += `/* Path: ${table.fullPath} */\n`;
+                exportContent += techSql + ";\n\n";
+                exportContent += `--------------------------------------------------\n\n`;
+                exportCount++;
+            }
+        }
+    });
+
+    if (exportCount === 0) {
+        alert("Geen Modellaag tabellen gevonden in de huidige selectie.");
+        return;
+    }
+
+    // De download actie
+    const blob = new Blob([exportContent], { type: 'text/sql' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Cognos_Tech_Export_${new Date().toISOString().slice(0,10)}.sql`;
+    document.body.appendChild(a);
+    a.click();
+    
+    // Opruimen
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+    
+    this.ui.updateStatus(`Export voltooid! ${exportCount} tabellen geëxporteerd.`);
+}
+
+
+
+
+
+
+
+
   }
 
   return App;

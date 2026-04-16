@@ -13,6 +13,10 @@ define(["jquery"], function ($) {
                     <div id="status-bar" style="background: #f8f9fa; padding: 10px; border-radius: 4px; margin-bottom: 15px; border-left: 4px solid #005fb8;">
                         Ready to load model...
                     </div>
+                  
+                    <button id="export-tech-sql" style="padding: 8px 15px; background: #005fb8; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                        📥 Export Technical SQL
+                    </button>
 
                     <div class="time-travel-panel" style="display: flex; align-items: center; gap: 12px; padding: 12px; background: #fcfcfc; border: 1px solid #e0e0e0; border-radius: 8px; margin-bottom: 20px;">
                         <span class="time-label" style="font-size: 11px; font-weight: 800; color: #005fb8; text-transform: uppercase; letter-spacing: 1px;">🕒 Time Travel</span>
@@ -73,66 +77,65 @@ define(["jquery"], function ($) {
 
         // --- TIME TRAVEL LOGIC FOR TABLE ---
         const isTableModified = this.app.timeMachine.isModified(table.lastModified);
-        const tableRecentBadge = isTableModified 
-            ? `<span class="modified-indicator" title="Gewijzigd op: ${table.lastModified.toLocaleString()} door ${table.modifiedBy}">MODIFIED</span>` 
-            : "";
+        const tableRecentBadge = isTableModified
+          ? `<span class="modified-indicator" title="Gewijzigd op: ${table.lastModified.toLocaleString()} door ${table.modifiedBy}">MODIFIED</span>`
+          : "";
 
         // --- TIME TRAVEL LOGIC FOR COLUMNS ---
         const columnList = table.columns
           .map((col) => {
             const hName = this.highlightText(col.name, searchTerm);
             const isColModified = this.app.timeMachine.isModified(col.lastModified);
-            
+
             // Gebruik oranje badge als de kolom recent gewijzigd is
             const badgeClass = isColModified ? "column-badge-modified" : "column-badge";
-            const tooltip = isColModified 
-                ? `title="Gewijzigd op: ${col.lastModified.toLocaleString()} door ${col.modifiedBy}"` 
-                : "";
+            const tooltip = isColModified
+              ? `title="Gewijzigd op: ${col.lastModified.toLocaleString()} door ${col.modifiedBy}"`
+              : "";
 
             return `<span class="${badgeClass}" ${tooltip}>${hName}</span>`;
           })
           .join("");
 
+        //const technicalSQL = (table.layer === "Model") ? this.generateTechnicalExportSQL(table) : null;
+
         const html = `
-            <div class="card">
-                <div class="card-header">
-                    <div class="breadcrumb-wrapper" title="Klik om het volledige pad te zien/verbergen">
-                        <span style="color: #ffc107; margin-right: 5px; flex-shrink: 0;">📂</span>
-                        
-                        <div class="path-collapsed" style="display: flex; align-items: center; overflow: hidden;">
-                            <span class="path-ellipsis">...</span>
-                            <span class="folder-path" style="margin-left: 5px;">${this.highlightText(table.parentFolder, searchTerm)}</span>
-                        </div>
+        <div class="card">
+   <div class="card-header">
+      <div class="breadcrumb-wrapper" title="Klik om het volledige pad te zien/verbergen">
+         <span style="color: #ffc107; margin-right: 5px; flex-shrink: 0;">📂</span>
+         <div class="path-collapsed" style="display: flex; align-items: center; overflow: hidden;">
+            <span class="path-ellipsis">...</span>
+            <span class="folder-path" style="margin-left: 5px;">${this.highlightText(table.parentFolder, searchTerm)}</span>
+         </div>
+         <div class="path-expanded" style="display: none; overflow: hidden;">
+            <span class="full-path-display">${this.highlightText(table.fullPath, searchTerm)}</span>
+         </div>
+         <span style="color: #ccc; margin: 0 8px; flex-shrink: 0;">/</span>
+         <strong class="table-name" style="color: #333; flex-shrink: 0;">
+         ${this.highlightText(table.name, searchTerm)}
+         </strong>
+         ${tableRecentBadge}
+      </div>
+      <div class="btn-group">
+         <button class="toggle-view active" data-view="grid">📊 Grid</button>
+         <button class="toggle-view" data-view="sql">⌨️ SQL</button>
+      </div>
+   </div>
+   <div class="view-content grid-view" style="padding: 15px;">
+      ${columnList}
+   </div>
+   <div class="view-content sql-view" style="padding: 0; display: none; position: relative;">
+      <button class="copy-sql-btn">Copy SQL</button>
+      <div class="sql-container clickable-sql" title="Click to toggle highlighting" data-highlight="on">
+         <pre class="sql-block highlighted-version">${searchHighlightedSQL}</pre>
+         <pre class="sql-block clean-version" style="display:none;">${highlightedSQL}</pre>
+      </div>
+   </div>
+</div>
+`;
 
-                        <div class="path-expanded" style="display: none; overflow: hidden;">
-                            <span class="full-path-display">${this.highlightText(table.fullPath, searchTerm)}</span>
-                        </div>
 
-                        <span style="color: #ccc; margin: 0 8px; flex-shrink: 0;">/</span>
-                        <strong class="table-name" style="color: #333; flex-shrink: 0;">
-                            ${this.highlightText(table.name, searchTerm)}
-                        </strong>
-                        ${tableRecentBadge}
-                    </div>
-
-                    <div class="btn-group">
-                        <button class="toggle-view active" data-view="grid">📊 Grid</button>
-                        <button class="toggle-view" data-view="sql">⌨️ SQL</button>
-                    </div>
-                </div>
-
-                <div class="view-content grid-view" style="padding: 15px;">
-                    ${columnList}
-                </div>
-
-                <div class="view-content sql-view" style="padding: 0; display: none; position: relative;">
-                    <button class="copy-sql-btn">Copy SQL</button>
-                    <div class="sql-container clickable-sql" title="Click to toggle highlighting" data-highlight="on">
-                        <pre class="sql-block highlighted-version">${searchHighlightedSQL}</pre>
-                        <pre class="sql-block clean-version" style="display:none;">${highlightedSQL}</pre>
-                    </div>
-                </div>
-            </div>`;
         $preview.append(html);
       });
     }
@@ -237,6 +240,80 @@ define(["jquery"], function ($) {
 
       return `SELECT\n${selectLines.join("\n")}\nFROM ${physicalTable} ${aliasName}`;
     }
+
+
+   generateTechnicalExportSQL(table) {
+    if (table.layer !== "Model") return null;
+
+    let techLines = [];
+    let businessLines = this.getRawLineageLines(table);
+    
+    // We pakken de tabelnaam van de eerste kolom lineage
+    const physicalTableName = businessLines[0]?.physicalTable || "UNKNOWN";
+    const aliasName = businessLines[0]?.aliasName || "ALIAS";
+
+    // Zoek de Datalaag op in de achtergrond via de app referentie
+    const dataLayerTable = this.app.allData.find(t => 
+        t.layer === "Data" && t.name === physicalTableName
+    );
+
+    if (dataLayerTable) {
+        dataLayerTable.columns.forEach(col => {
+            const isID = col.name.toUpperCase().includes("_ID") || 
+                         col.name.toUpperCase().includes("_ID_");
+            
+            // Ontdubbeling
+            const alreadyInModel = businessLines.some(line => 
+                line.source.toLowerCase() === `${aliasName}.${col.name}`.toLowerCase()
+            );
+
+            if (isID && !alreadyInModel) {
+                techLines.push({
+                    source: `${aliasName}.${col.name}`,
+                    alias: `"${col.name}"`
+                });
+            }
+        });
+    }
+
+    // Combineer: ID's eerst, dan de rest
+    const combinedLines = [...techLines, ...businessLines];
+    return this.formatSQLLines(combinedLines, physicalTableName, aliasName);
+}
+
+getRawLineageLines(table) {
+    let lines = [];
+    table.columns.forEach((col) => {
+        const lineage = col.lineage || [];
+        const aliasMatch = lineage[0]?.match(/\[.*?\]\.\[(.*?)\]/);
+        const sourceMatch = lineage[lineage.length - 1]?.match(/\[.*?\]\.\[(.*?)\]\.\[(.*?)\]/);
+
+        if (sourceMatch && aliasMatch) {
+            lines.push({
+                source: `${aliasMatch[1]}.${sourceMatch[2]}`,
+                alias: `"${col.name}"`,
+                physicalTable: sourceMatch[1],
+                aliasName: aliasMatch[1]
+            });
+        }
+    });
+    return lines;
+}
+
+formatSQLLines(rawLines, physicalTable, aliasName) {
+    if (rawLines.length === 0) return "";
+    const maxLength = Math.max(...rawLines.map(l => l.source.length));
+
+    const selectLines = rawLines.map((line, index) => {
+        const prefix = (index === 0) ? " " : ",";
+        const padding = " ".repeat(maxLength - line.source.length);
+        return `${prefix}${line.source}${padding} AS ${line.alias}`;
+    });
+
+    return `SELECT\n${selectLines.join("\n")}\nFROM ${physicalTable} ${aliasName}`;
+}
+
+
   }
   return UI;
 });

@@ -61,6 +61,8 @@ define(["jquery"], function ($) {
         }
 
         const highlightedSQL = this.highlightSQL(sqlContent);
+        // We highlighten de SQL nu apart van de tekst-zoekterm
+        const searchHighlightedSQL = this.highlightText(highlightedSQL, searchTerm);
         // -------------------
 
         const columnList = table.columns
@@ -87,10 +89,15 @@ define(["jquery"], function ($) {
                                     ${columnList}
                                 </div>
                                 <div class="view-content sql-view" style="padding: 0; display: none;">
-                                <div class="sql-container">
-                                                <button class="copy-sql-btn">Copy SQL</button>
-                                                <pre class="sql-block">${this.highlightText(highlightedSQL, searchTerm)}</pre>
-                                            </div>
+                                  <div class="sql-container">
+                                      <button class="copy-sql-btn">Copy SQL</button>
+                                      <div class="sql-container clickable-sql" title="Click to toggle highlighting" data-highlight="on">
+                
+                                          <pre class="sql-block highlighted-version">${searchHighlightedSQL}</pre>
+                                          <pre class="sql-block clean-version" style="display:none;">${highlightedSQL}</pre>
+                
+                                      </div>
+                                  </div>
                                 </div>
                             </div>
                         `;

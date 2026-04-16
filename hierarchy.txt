@@ -1,0 +1,31 @@
+namespace -> start node
+   ...
+   name = "Modellaag"
+   ...
+     namespace
+     ...
+        name = "Relationeel"
+        folder
+        ...
+           name = "Gemeenschappelijke Dimensies"
+           folder = Datum map
+           querySubject
+           ...
+              name
+              definition
+              ...
+                 sql
+              queryItem
+              ...
+                 name = CAK periode   <===============
+                 lastChanged
+                 lastChangedBy
+                 expression
+                 ...
+                    refobjViaShortcut
+                    ...
+                       refobj = [Joinlaag].[D_DATUM] <===============
+                       refobj = [Datalaag].[D_DATUM_BASIS].[CAK_PERIODE]  <===============
+                    
+              
+           

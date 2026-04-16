@@ -165,6 +165,24 @@ define([], function () {
 
 
 
+.clickable-sql {
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.clickable-sql:hover {
+    border: 1px solid #444; /* Kleine highlight bij hover */
+}
+
+/* Zorg dat de clean-version wel de SQL-kleuren (syntax highlighting) behoudt, 
+   maar niet de gele/blauwe zoek-matches! */
+.clean-version .search-match {
+    background: transparent !important;
+    border: none !important;
+    color: inherit !important;
+}
+
+
 
     `; /*einde CSS*/
 

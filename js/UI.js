@@ -7,51 +7,55 @@ define(["jquery"], function ($) {
       this.app = app; // Reference to app to access timeMachine
     }
 
-    renderSkeleton() {
-      this.$cnt.html(`
-                <div class="cognos-extractor-wrapper" style="font-family: sans-serif; padding: 15px;">
-                    <div id="status-bar" style="background: #f8f9fa; padding: 10px; border-radius: 4px; margin-bottom: 15px; border-left: 4px solid #005fb8;">
-                        Ready to load model...
-                    </div>
-                  
-                    <button id="export-tech-sql" style="padding: 8px 15px; background: #005fb8; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
-                        📥 Export Technical SQL
+renderSkeleton() {
+    this.$cnt.html(`
+        <div class="cognos-extractor-wrapper" style="font-family: -apple-system, system-ui, sans-serif; padding: 20px; background: #fff; color: #333;">
+            
+            <div id="status-bar" style="background: #f0f7ff; padding: 12px 18px; border-radius: 4px; margin-bottom: 20px; border-left: 4px solid #005fb8; font-size: 13px; color: #004a91;">
+                Klaar voor gebruik...
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-bottom: 12px; height: 40px;">
+                <div style="position: relative; width: 110px; flex-shrink: 0;">
+                    <button style="width: 100%; height: 100%; border: 1px solid #ccc; background: #fff; border-radius: 4px; font-size: 12px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px;">
+                        📂 Kies XML
                     </button>
-
-                    <div class="time-travel-panel" style="display: flex; align-items: center; gap: 12px; padding: 12px; background: #fcfcfc; border: 1px solid #e0e0e0; border-radius: 8px; margin-bottom: 20px;">
-                        <span class="time-label" style="font-size: 11px; font-weight: 800; color: #005fb8; text-transform: uppercase; letter-spacing: 1px;">🕒 Time Travel</span>
-                        <select id="time-range-select" style="padding: 4px 8px; border-radius: 4px; border: 1px solid #ccc; font-size: 12px;">
-                            <option value="all">Anytime (Full Model)</option>
-                            <option value="1">Last 24 Hours</option>
-                            <option value="7">Last 7 Days</option>
-                            <option value="30">Last 30 Days</option>
-                            <option value="90">Last 90 Days</option>
-                        </select>
-                        <span id="time-info-msg" style="font-size: 11px; color: #666; font-style: italic;"></span>
-                    </div>
-
-                    <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 20px;">
-                        <input type="file" id="xml-upload" accept=".xml" />
-                        <input type="text" id="search-box" placeholder="Zoek tabellen of kolommen..."
-                               style="flex-grow: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px;" />
-                    </div>
-
-                    <div id="layer-tabs" style="display: flex; gap: 5px; margin-bottom: 15px;">
-                        <button class="layer-tab active" data-layer="all">Alles</button>
-                        <button class="layer-tab" data-layer="Data">Datalaag</button>
-                        <button class="layer-tab" data-layer="Model">Modellaag</button>
-                    </div>
-
-                    <div id="data-preview"></div>
-
-                    <div id="pagination-controls" style="margin-top: 20px; text-align: center; display: none;">
-                        <button id="load-more" style="padding: 10px 20px; cursor: pointer; background: #005fb8; color: white; border: none; border-radius: 4px;">
-                            Load More Results
-                        </button>
-                    </div>
+                    <input type="file" id="xml-upload" accept=".xml" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;" />
                 </div>
-            `);
-    }
+                
+                <input type="text" id="search-box" placeholder="Zoek tabellen of kolommen (gebruik :: voor incrementeel zoeken, regExp is ook mogelijk)..."
+                       style="flex-grow: 1; height: 100%; padding: 0 15px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; outline: none; box-sizing: border-box;" />
+
+                <button id="export-tech-sql" style="width: 180px; height: 100%; background: #005fb8; color: white; border: none; border-radius: 4px; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.2s;">
+                    <span>📥</span> Export Tech SQL
+                </button>
+            </div>
+
+            <div style="display: flex; align-items: center; justify-content: space-between; margin: 20px 0px 20px; padding-bottom: 15px; border-bottom: 1px solid #eee;">
+                
+                <div id="layer-tabs" style="display: flex; gap: 8px;">
+                    <button class="layer-tab active" data-layer="all">Alles</button>
+                    <button class="layer-tab" data-layer="Data">Datalaag</button>
+                    <button class="layer-tab" data-layer="Model">Modellaag</button>
+                </div>
+
+                <div class="time-travel-panel" style="display: flex; align-items: center; gap: 10px; padding: 4px 12px; background: #fafafa; border: 1px solid #ddd; border-radius: 4px; height: 32px; box-sizing: border-box;">
+                    <span style="font-size: 10px; font-weight: 800; color: #005fb8; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap;">🕒 Laatst Gewijzigd</span>
+                    <select id="time-range-select" style="border: none; background: transparent; font-size: 12px; color: #555; cursor: pointer; outline: none;">
+                        <option value="all">Anytime (Full Model)</option>
+                        <option value="1">Last 24 Hours</option>
+                        <option value="7">Last 7 Days</option>
+                        <option value="30">Last 30 Days</option>
+                        <option value="1100">Legacy (Mei 2023)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="data-preview"></div>
+        </div>
+    `);
+}
+
 
     updateStatus(msg) {
       this.$cnt.find("#status-bar").text(msg);

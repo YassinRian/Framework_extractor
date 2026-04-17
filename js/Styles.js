@@ -218,7 +218,7 @@ define([], function () {
     background: #fcfcfc;
     border: 1px solid #e0e0e0;
     border-radius: 8px;
-    margin-bottom: 20px;
+    /*margin-bottom: 20px; */
     box-shadow: inset 0 1px 3px rgba(0,0,0,0.02);
 }
 
@@ -255,6 +255,35 @@ define([], function () {
     font-weight: bold;
 }
 
+
+#export-tech-sql:hover {
+    background: #004a91 !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.layer-tab {
+    padding: 6px 14px;
+    border: 1px solid #005fb8;
+    background: #fff;
+    color: #005fb8;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.layer-tab.active {
+    background: #005fb8;
+    color: #fff;
+}
+
+#export-tech-sql:hover {
+    background: #004a91;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,95,184,0.3);
+}
+#export-tech-sql:active {
+    transform: translateY(0);
+}
 
 
     `; /*einde CSS*/

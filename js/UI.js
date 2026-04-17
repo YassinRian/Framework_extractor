@@ -23,16 +23,46 @@ renderSkeleton() {
                     <input type="file" id="xml-upload" accept=".xml" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;" />
                 </div>
                 
-                <input type="text" id="search-box" placeholder="Zoek tabellen of kolommen (gebruik :: voor incrementeel zoeken, regExp is ook mogelijk)..."
+                <input type="text" id="search-box" placeholder="Zoek gegevens op (gebruik :: voor incrementeel zoeken)..."
                        style="flex-grow: 1; height: 100%; padding: 0 15px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; outline: none; box-sizing: border-box;" />
 
-                <button id="export-tech-sql" style="width: 180px; height: 100%; background: #005fb8; color: white; border: none; border-radius: 4px; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.2s;">
-                    <span>📥</span> Export Tech SQL
+<div class="export-dropdown-container" style="position: relative; width: 200px;">
+    
+    <button id="export-main-btn" style="width: 100%; height: 100%; background: #005fb8; color: white; border: none; border-radius: 4px; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+        📥 Export Modellaag <span style="font-size: 8px;">▼</span>
+    </button>
+    
+    <div id="export-menu" style="display: none; position: absolute; top: 42px; right: 0; background: white; border: 1px solid #ccc; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1000; width: 240px; overflow: hidden;">
+        
+        <div id="export-tech-sql" class="dropdown-item" style="padding: 12px 15px; cursor: pointer; border-bottom: 1px solid #eee; transition: background 0.2s;">
+            <div style="font-weight: 600; font-size: 12px; color: #333;">Standaard SQL Export</div>
+            <div style="font-size: 10px; color: #666;">Inclusief technische ID's uit Datalaag.</div>
+        </div>
+
+        <div style="padding: 15px; background: #fafafa; border-bottom: 1px solid #eee;">
+            <div style="font-weight: 600; font-size: 11px; color: #005fb8; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Gepersonaliseerde SQL</div>
+            
+            <div style="position: relative; margin-bottom: 10px;">
+                <button style="width: 100%; padding: 6px; font-size: 10px; background: white; border: 1px dotted #005fb8; border-radius: 4px; cursor: pointer; color: #005fb8; font-weight: 600;">
+                    🔗 Koppel Alias Map (.txt)
                 </button>
+                <input type="file" id="alias-map-upload" accept=".txt" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;" />
+            </div>
+
+            <div id="export-custom-sql" class="dropdown-item" style="padding: 10px; text-align: center; background: #28a745; color: white; border-radius: 4px; font-size: 11px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 4px rgba(40,167,69,0.2);">
+                Exporteer met eigen Aliassen
+            </div>
+            <div style="font-size: 9px; color: #888; margin-top: 6px; text-align: center; font-style: italic;">
+                Onbekende objecten krijgen [VERVANG]
+            </div>
+        </div>
+
+    </div>
+</div>
+
             </div>
 
             <div style="display: flex; align-items: center; justify-content: space-between; margin: 20px 0px 20px; padding-bottom: 15px; border-bottom: 1px solid #eee;">
-                
                 <div id="layer-tabs" style="display: flex; gap: 8px;">
                     <button class="layer-tab active" data-layer="all">Alles</button>
                     <button class="layer-tab" data-layer="Data">Datalaag</button>
@@ -42,11 +72,11 @@ renderSkeleton() {
                 <div class="time-travel-panel" style="display: flex; align-items: center; gap: 10px; padding: 4px 12px; background: #fafafa; border: 1px solid #ddd; border-radius: 4px; height: 32px; box-sizing: border-box;">
                     <span style="font-size: 10px; font-weight: 800; color: #005fb8; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap;">🕒 Laatst Gewijzigd</span>
                     <select id="time-range-select" style="border: none; background: transparent; font-size: 12px; color: #555; cursor: pointer; outline: none;">
-                        <option value="all">Anytime (Full Model)</option>
-                        <option value="1">Last 24 Hours</option>
-                        <option value="7">Last 7 Days</option>
-                        <option value="30">Last 30 Days</option>
-                        <option value="1100">Legacy (Mei 2023)</option>
+                        <option value="all">Volledige historie</option>
+                        <option value="1">Laatste 24 uur</option>
+                        <option value="7">Laatste 7 dagen</option>
+                        <option value="30">Laatste 30 dagen</option>
+                        <option value="365">Laatste jaar (Archief)</option>
                     </select>
                 </div>
             </div>
@@ -246,55 +276,79 @@ renderSkeleton() {
     }
 
 
-   generateTechnicalExportSQL(table) {
-    if (table.layer !== "Model") return null;
-
-    let techLines = [];
+generateTechnicalExportSQL(table, aliasMap = null) {
     let businessLines = this.getRawLineageLines(table);
+    if (businessLines.length === 0) return null;
+
+    const physicalTableName = businessLines[0].physicalTable;
+    const originalAlias = businessLines[0].aliasName;
     
-    // We pakken de tabelnaam van de eerste kolom lineage
-    const physicalTableName = businessLines[0]?.physicalTable || "UNKNOWN";
-    const aliasName = businessLines[0]?.aliasName || "ALIAS";
+    let finalAlias = originalAlias;
+    let needsReplacement = false;
 
-    // Zoek de Datalaag op in de achtergrond via de app referentie
-    const dataLayerTable = this.app.allData.find(t => 
-        t.layer === "Data" && t.name === physicalTableName
-    );
+    // VERANDERING: Check of aliasMap een object is (zelfs een lege {})
+    if (aliasMap !== null) {
+        if (aliasMap[originalAlias.toLowerCase()]) {
+            finalAlias = aliasMap[originalAlias.toLowerCase()];
+        } else {
+            // Als we in Custom Mode zitten maar de naam staat niet in de map (of map is leeg)
+            finalAlias = "[VERVANG]"; 
+            needsReplacement = true;
+        }
+    }
 
+    let finalLines = [];
+
+    // 1. IDs (met de gestripte kolomnaam)
+    const dataLayerTable = this.app.allData.find(t => t.layer === "Data" && t.name === physicalTableName);
     if (dataLayerTable) {
         dataLayerTable.columns.forEach(col => {
-            const isID = col.name.toUpperCase().includes("_ID") || 
-                         col.name.toUpperCase().includes("_ID_");
-            
-            // Ontdubbeling
-            const alreadyInModel = businessLines.some(line => 
-                line.source.toLowerCase() === `${aliasName}.${col.name}`.toLowerCase()
-            );
+            const isID = col.name.toUpperCase().includes("_ID");
+            const alreadyInModel = businessLines.some(l => {
+                const p = l.source.split('.');
+                return p[p.length-1].toLowerCase() === col.name.toLowerCase();
+            });
 
             if (isID && !alreadyInModel) {
-                techLines.push({
-                    source: `${aliasName}.${col.name}`,
-                    alias: `"${col.name}"`
+                finalLines.push({ 
+                    source: `${finalAlias}.${col.name}`, 
+                    alias: `"${col.name}"` 
                 });
             }
         });
     }
 
-    // Combineer: ID's eerst, dan de rest
-    const combinedLines = [...techLines, ...businessLines];
-    return this.formatSQLLines(combinedLines, physicalTableName, aliasName);
+    // 2. Business Kolommen (met de gestripte kolomnaam)
+    businessLines.forEach(line => {
+        const parts = line.source.split('.');
+        const cleanColumnName = parts[parts.length - 1]; 
+        finalLines.push({
+            source: `${finalAlias}.${cleanColumnName}`,
+            alias: line.alias
+        });
+    });
+
+    let sql = this.formatSQLLines(finalLines, physicalTableName, finalAlias);
+    
+    if (needsReplacement) {
+        sql = `-- ATTENTIE: Geen alias mapping gevonden voor '${originalAlias}'. Gebruik [VERVANG].\n` + sql;
+    }
+
+    return sql;
 }
+
 
 getRawLineageLines(table) {
     let lines = [];
     table.columns.forEach((col) => {
         const lineage = col.lineage || [];
-        const aliasMatch = lineage[0]?.match(/\[.*?\]\.\[(.*?)\]/);
+        // Regex om [Map].[Tabel].[Kolom] te vangen
         const sourceMatch = lineage[lineage.length - 1]?.match(/\[.*?\]\.\[(.*?)\]\.\[(.*?)\]/);
+        const aliasMatch = lineage[0]?.match(/\[.*?\]\.\[(.*?)\]/);
 
         if (sourceMatch && aliasMatch) {
             lines.push({
-                source: `${aliasMatch[1]}.${sourceMatch[2]}`,
+                source: `${aliasMatch[1]}.${sourceMatch[2]}`, // Dit is de 'vuile' source
                 alias: `"${col.name}"`,
                 physicalTable: sourceMatch[1],
                 aliasName: aliasMatch[1]
@@ -314,6 +368,7 @@ formatSQLLines(rawLines, physicalTable, aliasName) {
         return `${prefix}${line.source}${padding} AS ${line.alias}`;
     });
 
+    // Gebruik de aliasName (finalAlias) ook hier achter de tabelnaam
     return `SELECT\n${selectLines.join("\n")}\nFROM ${physicalTable} ${aliasName}`;
 }
 

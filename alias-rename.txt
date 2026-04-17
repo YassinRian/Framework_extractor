@@ -1,0 +1,2 @@
+D_CDB_KPI_DETAIL|hallo
+F_CDB_I_KPI|cool

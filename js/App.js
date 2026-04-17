@@ -18,6 +18,7 @@ define(["jquery", "./UI", "./Extractor", "./Styles", "./TimeMachine"], function 
       this.currentPage = 1;
       Styles.inject();
       this.currentLayerFilter = "all";
+      this.aliasMap = {};
     }
 
     draw(oControlHost) {
@@ -149,13 +150,57 @@ define(["jquery", "./UI", "./Extractor", "./Styles", "./TimeMachine"], function 
             this.handleSearch($("#search-box").val());
         });
 
-// GEBRUIK DEZE SYNTAX: Dit werkt ALTIJD voor dynamische knoppen
-  $container.on("click", "#export-tech-sql", (e) => {
-        console.log("BOOM! De knop werkt nu."); 
-        e.preventDefault();
-        e.stopPropagation();
-        this.handleTechnicalExport();
-    });
+
+// Toggle het menu
+$container.on("click", "#export-main-btn", (e) => {
+    e.stopPropagation();
+    $("#export-menu").fadeToggle(150);
+});
+
+// Sluit het menu als je ergens anders klikt
+$(document).on("click", () => {
+    $("#export-menu").fadeOut(150);
+});
+
+// Voorkom dat het menu sluit als je binnen het menu klikt (voor de file-upload)
+$container.on("click", "#export-menu", (e) => {
+    e.stopPropagation();
+});
+
+// De bestaande export handlers blijven hetzelfde
+$container.on("click", "#export-tech-sql", () => this.handleTechnicalExport(false));
+
+$container.on("click", "#export-custom-sql", () => {
+    // Forceer een leeg object {} als er geen map geladen is, zodat de generator 
+    // weet dat we in 'Custom Mode' zitten en niet in 'Technical Mode'.
+    const mapToUse = this.aliasMap || {}; 
+    this.handleTechnicalExport(true, mapToUse); 
+});
+
+
+// upload alias-map file
+$container.on("change", "#alias-map-upload", (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        const lines = event.target.result.split(/\r?\n/);
+        
+        // We overschrijven het lege object met de nieuwe data
+        this.aliasMap = {}; 
+        lines.forEach(line => {
+            const [oldAlias, newAlias] = line.split("|").map(s => s?.trim());
+            if (oldAlias && newAlias) {
+                this.aliasMap[oldAlias.toLowerCase()] = newAlias;
+            }
+        });
+        
+        this.ui.updateStatus(`Alias map geladen: ${Object.keys(this.aliasMap).length} items.`);
+    };
+    reader.readAsText(file);
+});
+
 
 
     }
@@ -268,16 +313,24 @@ handleSearch(term = "") {
     }
 
 
-handleTechnicalExport() {
+handleTechnicalExport(useCustomAlias = false, mapToUse = null) {
     // Check of we data hebben
     if (!this.filteredData || this.filteredData.length === 0) {
         alert("Er zijn geen resultaten om te exporteren. Upload eerst een model of pas je zoekterm aan.");
         return;
     }
 
-    this.ui.updateStatus("Bezig met genereren van technische export...");
+    // Check of er een map is als de gebruiker de custom knop gebruikt
+    if (useCustomAlias && Object.keys(this.aliasMap || {}).length === 0) {
+        if (!confirm("Geen alias-map geladen. Wil je doorgaan met de standaard aliassen?")) {
+            return;
+        }
+    }
 
-    let exportContent = `-- Cognos Framework Manager Technical Export\n`;
+    const modeText = useCustomAlias ? "Custom Alias" : "Technische";
+    this.ui.updateStatus(`Bezig met genereren van ${modeText} export...`);
+
+    let exportContent = `-- Cognos Framework Manager ${modeText} Export\n`;
     exportContent += `-- Genereerd op: ${new Date().toLocaleString()}\n`;
     exportContent += `-- Filter: ${$("#search-box").val() || "Geen"}\n`;
     exportContent += `--------------------------------------------------\n\n`;
@@ -285,9 +338,13 @@ handleTechnicalExport() {
     let exportCount = 0;
 
     this.filteredData.forEach(table => {
-        // We exporteren alleen de Modellaag omdat de Datalaag al de ID's heeft
         if (table.layer === "Model") {
-            const techSql = this.ui.generateTechnicalExportSQL(table);
+            // WE GEVEN HIER DE ALIASMAP MEE (als useCustomAlias true is)
+            const techSql = this.ui.generateTechnicalExportSQL(
+                table, 
+                mapToUse
+            );
+
             if (techSql) {
                 exportContent += `/* Table: ${table.name} */\n`;
                 exportContent += `/* Path: ${table.fullPath} */\n`;
@@ -303,16 +360,17 @@ handleTechnicalExport() {
         return;
     }
 
-    // De download actie
+    // Bestandsnaam bepalen op basis van de modus
+    const fileNamePrefix = useCustomAlias ? "Cognos_Custom_Alias" : "Cognos_Tech_Export";
+    
     const blob = new Blob([exportContent], { type: 'text/sql' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Cognos_Tech_Export_${new Date().toISOString().slice(0,10)}.sql`;
+    a.download = `${fileNamePrefix}_${new Date().toISOString().slice(0,10)}.sql`;
     document.body.appendChild(a);
     a.click();
     
-    // Opruimen
     window.URL.revokeObjectURL(url);
     document.body.removeChild(a);
     

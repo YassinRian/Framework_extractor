@@ -15,7 +15,7 @@ rsync -av --delete "$SOURCE_DIR" "$DEST_DIR"
 echo "Updating App.js dependencies..."
 
 if [ -f "$TARGET_FILE" ]; then
-    sed -i 's|define(\["jquery", "./UI", "./Extractor", "./Styles"\]|define(["jquery", "'$BASE_URL'/UI.js", "'$BASE_URL'/Extractor.js", "'$BASE_URL'/Styles.js"]|' "$TARGET_FILE"
+    sed -i 's|define(\["jquery", "./UI", "./Extractor", "./Styles", "./TimeMachine"\]|define(["jquery", "'$BASE_URL'/UI.js", "'$BASE_URL'/Extractor.js", "'$BASE_URL'/Styles.js", "'$BASE_URL'/TimeMachine.js"]|' "$TARGET_FILE"
     echo "Done! App.js has been updated."
 else
     echo "Error: App.js not found in destination."

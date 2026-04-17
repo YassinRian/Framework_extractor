@@ -202,6 +202,29 @@ $container.on("change", "#alias-map-upload", (e) => {
 });
 
 
+// --- Modal Interactie ---
+
+// 1. Open de modal
+$container.on("click", "#help-trigger", () => {
+    // We gebruiken flex om de modal netjes te centreren, 
+    // hide/fadeIn voor een vloeiende overgang.
+    $container.find("#help-modal").css("display", "flex").hide().fadeIn(200);
+});
+
+// 2. Sluit de modal (via het kruisje of de 'Begrepen' knop)
+$container.on("click", "#close-modal, #close-modal-btn", () => {
+    $container.find("#help-modal").fadeOut(200);
+});
+
+// 3. Sluit de modal als de gebruiker buiten het witte vlak klikt
+$container.on("click", "#help-modal", (e) => {
+    // Alleen sluiten als er op de donkere overlay zelf wordt geklikt
+    if (e.target.id === "help-modal") {
+        $(e.target).fadeOut(200);
+    }
+});
+
+
 
     }
 
